@@ -165,9 +165,42 @@ if [ -d /tmp/themes-bundle ]; then
     
     # Install Plymouth Theme
     echo "Installing Plymouth theme..."
-    cd plymouth-theme-apple
-    cp -r apple /usr/share/plymouth/themes/
-    plymouth-set-default-theme apple
+    cd plymouth-themes
+    # Use minimal macOS-style spinner theme
+    mkdir -p /usr/share/plymouth/themes/tahoeos-spinner
+    cp -r pack_1/sphere/spinner/* /usr/share/plymouth/themes/tahoeos-spinner/ 2>/dev/null || \
+    cp -r pack_1/cuts/cuts/* /usr/share/plymouth/themes/tahoeos-spinner/ 2>/dev/null || true
+    
+    # If no theme copied, create a simple one
+    if [ ! -f /usr/share/plymouth/themes/tahoeos-spinner/spinner.plymouth ]; then
+        cat > /usr/share/plymouth/themes/tahoeos-spinner/tahoeos-spinner.plymouth << 'PLYM'
+[Plymouth Theme]
+Name=TahoeOS Spinner
+Description=Simple macOS-style boot theme
+ModuleName=two-step
+
+[two-step]
+Font=Inter 12
+TitleFont=Inter Light 24
+ImageDir=/usr/share/plymouth/themes/tahoeos-spinner
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.382
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.382
+HorizontalAlignment=.5
+VerticalAlignment=.7
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.96
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x000000
+BackgroundEndColor=0x000000
+ProgressBarBackgroundColor=0x606060
+ProgressBarForegroundColor=0x0066cc
+PLYM
+    fi
+    
+    plymouth-set-default-theme tahoeos-spinner
     dracut -f 2>/dev/null || true
     cd ..
     

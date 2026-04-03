@@ -60,8 +60,8 @@ jobs:
           # GRUB Theme
           git clone --depth=1 https://github.com/vinceliuice/grub2-themes.git
           
-          # Plymouth Theme
-          git clone --depth=1 https://github.com/AdisonCavani/plymouth-theme-apple.git
+          # Plymouth Theme (alternative - adi1090x)
+          git clone --depth=1 https://github.com/adi1090x/plymouth-themes.git
           
           cd ../..
           echo "Themes downloaded to build/themes-bundle/"
