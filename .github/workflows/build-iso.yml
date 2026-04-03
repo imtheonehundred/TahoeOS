@@ -43,6 +43,30 @@ jobs:
             [ -e /dev/loop$i ] || mknod /dev/loop$i b 7 $i
           done
 
+      - name: Download and prepare themes
+        run: |
+          mkdir -p build/themes-bundle
+          cd build/themes-bundle
+          
+          # GTK Theme
+          git clone --depth=1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git
+          
+          # Icon Theme
+          git clone --depth=1 https://github.com/vinceliuice/WhiteSur-icon-theme.git
+          
+          # Cursor Theme
+          git clone --depth=1 https://github.com/vinceliuice/WhiteSur-cursors.git
+          
+          # GRUB Theme
+          git clone --depth=1 https://github.com/vinceliuice/grub2-themes.git
+          
+          # Plymouth Theme
+          git clone --depth=1 https://github.com/AdisonCavani/plymouth-theme-apple.git
+          
+          cd ../..
+          echo "Themes downloaded to build/themes-bundle/"
+          ls -la build/themes-bundle/
+
       - name: Build ISO
         run: |
           mkdir -p /var/tmp/tahoeos
