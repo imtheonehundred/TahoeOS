@@ -48,7 +48,6 @@ plymouth-theme-spinner
 grub2-tools
 grub2-pc
 grub2-pc-modules
-grub2-efi-x64
 
 # Multimedia
 ffmpeg

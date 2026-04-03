@@ -29,8 +29,8 @@ jobs:
             anaconda \
             squashfs-tools \
             xorriso \
-            grub2-efi-x64 \
-            shim-x64 \
+            grub2-pc \
+            grub2-pc-modules \
             dracut-live \
             git \
             wget \
@@ -108,13 +108,6 @@ jobs:
             find /tmp -name "TahoeOS-*.iso" 2>/dev/null | head -5
           fi
       
-      - name: Copy ISO to workspace
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/iso-output
-          cp /tmp/iso-output/*.iso $GITHUB_WORKSPACE/iso-output/ 2>/dev/null || echo "Trying to find ISO..."
-          find /tmp/iso-output -name "*.iso" -exec cp {} $GITHUB_WORKSPACE/iso-output/ \; 2>/dev/null || true
-          ls -la $GITHUB_WORKSPACE/iso-output/
-
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
