@@ -20,7 +20,7 @@ bootloader --location=mbr --timeout=5 --append="quiet splash plymouth.enable=1"
 
 zerombr
 clearpart --all --initlabel
-autopart --type=btrfs
+part / --fstype=ext4 --size=8000
 
 reboot
 
