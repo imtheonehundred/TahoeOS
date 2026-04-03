@@ -137,15 +137,15 @@ echo "=== Installing Themes ==="
 if [ -d /tmp/themes-bundle ]; then
     cd /tmp/themes-bundle
     
-    # Install GTK Theme
-    echo "Installing GTK theme..."
-    cd WhiteSur-gtk-theme
-    ./install.sh -c Dark -l -N glassy --tweaks macOS -d /usr/share/themes
+    # Install GTK Theme (MacTahoe - macOS Sequoia/Tahoe style)
+    echo "Installing MacTahoe GTK theme..."
+    cd MacTahoe-gtk-theme
+    ./install.sh -c Dark -l -b --darker -d /usr/share/themes
     cd ..
     
-    # Install Icon Theme
-    echo "Installing icon theme..."
-    cd WhiteSur-icon-theme
+    # Install Icon Theme (MacTahoe)
+    echo "Installing MacTahoe icon theme..."
+    cd MacTahoe-icon-theme
     ./install.sh -d /usr/share/icons
     cd ..
     
@@ -226,8 +226,8 @@ EOF
 # GDM Settings
 cat > /etc/dconf/db/gdm.d/01-tahoeos << 'EOF'
 [org/gnome/desktop/interface]
-gtk-theme='WhiteSur-Dark'
-icon-theme='WhiteSur-dark'
+gtk-theme='MacTahoe-Dark'
+icon-theme='MacTahoe'
 cursor-theme='WhiteSur-cursors'
 EOF
 
@@ -237,8 +237,8 @@ cat > /etc/dconf/db/local.d/00-tahoeos << 'EOF'
 favorite-apps=['org.gnome.Nautilus.desktop', 'firefox.desktop', 'org.gnome.Terminal.desktop', 'steam.desktop', 'net.lutris.Lutris.desktop', 'org.gnome.Settings.desktop']
 
 [org/gnome/desktop/interface]
-gtk-theme='WhiteSur-Dark'
-icon-theme='WhiteSur-dark'
+gtk-theme='MacTahoe-Dark'
+icon-theme='MacTahoe'
 cursor-theme='WhiteSur-cursors'
 color-scheme='prefer-dark'
 enable-animations=true

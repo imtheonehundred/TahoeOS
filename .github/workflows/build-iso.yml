@@ -48,11 +48,11 @@ jobs:
           mkdir -p build/themes-bundle
           cd build/themes-bundle
           
-          # GTK Theme
-          git clone --depth=1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git
+          # GTK Theme - MacTahoe (macOS Sequoia/Tahoe style)
+          git clone --depth=1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git
           
-          # Icon Theme
-          git clone --depth=1 https://github.com/vinceliuice/WhiteSur-icon-theme.git
+          # Icon Theme - MacTahoe
+          git clone --depth=1 https://github.com/vinceliuice/MacTahoe-icon-theme.git
           
           # Cursor Theme
           git clone --depth=1 https://github.com/vinceliuice/WhiteSur-cursors.git
@@ -60,7 +60,7 @@ jobs:
           # GRUB Theme
           git clone --depth=1 https://github.com/vinceliuice/grub2-themes.git
           
-          # Plymouth Theme (alternative - adi1090x)
+          # Plymouth Theme
           git clone --depth=1 https://github.com/adi1090x/plymouth-themes.git
           
           cd ../..
