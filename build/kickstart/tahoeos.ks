@@ -46,12 +46,8 @@ livesys-scripts
 plymouth
 plymouth-theme-spinner
 grub2-tools
-grub2-efi-x64
-grub2-efi-x64-modules
 grub2-pc
 grub2-pc-modules
-shim-x64
-efibootmgr
 
 # Multimedia
 ffmpeg
