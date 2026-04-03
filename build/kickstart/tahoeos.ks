@@ -52,6 +52,8 @@ grub2-pc
 grub2-pc-modules
 shim-x64
 efibootmgr
+macboot
+syslinux
 
 # Multimedia
 ffmpeg
