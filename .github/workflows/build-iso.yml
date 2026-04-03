@@ -68,12 +68,17 @@ jobs:
           ls -la build/themes-bundle/
 
       - name: Build ISO
+        id: build
         run: |
-          # Clean up any previous build outputs
-          rm -rf /tmp/iso-output
-          rm -rf /var/tmp/tahoeos
-          mkdir -p /var/tmp/tahoeos
-          mkdir -p /tmp/iso-output
+          # Use unique directories to avoid conflicts
+          BUILD_ID=$(date +%s)
+          RESULTS_DIR="/tmp/iso-output-${BUILD_ID}"
+          TMP_DIR="/var/tmp/tahoeos-${BUILD_ID}"
+          
+          echo "BUILD_ID=${BUILD_ID}" >> $GITHUB_ENV
+          echo "RESULTS_DIR=${RESULTS_DIR}" >> $GITHUB_ENV
+          
+          mkdir -p "$RESULTS_DIR" "$TMP_DIR"
           
           # Ensure EFI packages are installed for lorax template processing
           dnf install -y grub2-efi-x64 shim-x64 || true
@@ -82,13 +87,25 @@ jobs:
             --make-iso \
             --ks=build/kickstart/tahoeos.ks \
             --no-virt \
-            --resultdir=/tmp/iso-output \
+            --resultdir="$RESULTS_DIR" \
             --project=TahoeOS \
             --releasever=42 \
             --iso-only \
             --iso-name=TahoeOS-2026.1-x86_64.iso \
-            --tmp=/var/tmp/tahoeos
+            --tmp="$TMP_DIR"
         timeout-minutes: 120
+
+      - name: Copy ISO to workspace
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/iso-output
+          ISO_DIR="${{ env.RESULTS_DIR }}"
+          if [ -d "$ISO_DIR" ]; then
+            cp "$ISO_DIR"/*.iso $GITHUB_WORKSPACE/iso-output/ 2>/dev/null || echo "No ISO in $ISO_DIR"
+            ls -la $GITHUB_WORKSPACE/iso-output/
+          else
+            echo "No ISO output directory found: $ISO_DIR"
+            find /tmp -name "*.iso" 2>/dev/null | head -5
+          fi
       
       - name: Copy ISO to workspace
         run: |
