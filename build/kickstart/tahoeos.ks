@@ -87,6 +87,7 @@ liberation-fonts
 
 # Remove bloat
 -libreoffice-*
+-unoconv
 -rhythmbox
 -totem
 -cheese
