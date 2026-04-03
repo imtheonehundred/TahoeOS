@@ -79,7 +79,9 @@ jobs:
           echo "RESULTS_DIR=${RESULTS_DIR}" >> $GITHUB_ENV
           echo "TMP_DIR=${TMP_DIR}" >> $GITHUB_ENV
           
-          mkdir -p "$RESULTS_DIR" "$TMP_DIR"
+          # DO NOT create RESULTS_DIR - livemedia-creator needs to create it
+          # Only create TMP_DIR
+          mkdir -p "$TMP_DIR"
           
           # Build only disk image, not ISO
           livemedia-creator \
