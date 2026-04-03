@@ -83,6 +83,7 @@ jobs:
           
           # Build only disk image, not ISO
           livemedia-creator \
+            --make-disk \
             --image-only \
             --ks=build/kickstart/tahoeos.ks \
             --no-virt \
