@@ -67,7 +67,7 @@ jobs:
           echo "Themes downloaded to build/themes-bundle/"
           ls -la build/themes-bundle/
 
-      - name: Build ISO with lorax
+      - name: Build ISO
         id: build
         run: |
           # Use unique directories to avoid conflicts
@@ -81,7 +81,7 @@ jobs:
           
           mkdir -p "$TMP_DIR"
           
-          # Build ISO with lorax
+          # Run lorax - it will fail at xorriso step but we get LiveOS files
           livemedia-creator \
             --make-iso \
             --nomacboot \
@@ -92,19 +92,48 @@ jobs:
             --releasever=42 \
             --iso-only \
             --iso-name=TahoeOS-2026.1-x86_64.iso \
-            --tmp="$TMP_DIR"
-        timeout-minutes: 120
+            --tmp="$TMP_DIR" || true
+          
+          echo "=== Lorax finished, creating ISO manually ==="
+          
+          # Find the work directory with LiveOS
+          WORK_DIR=$(find /var/tmp -maxdepth 3 -type d -name "lmc-work-*" 2>/dev/null | head -1)
+          echo "Work directory: $WORK_DIR"
+          
+          if [ -z "$WORK_DIR" ]; then
+            echo "ERROR: Could not find work directory"
+            exit 1
+          fi
+          
+          ls -la "$WORK_DIR"
+          ls -la "$WORK_DIR/LiveOS" 2>/dev/null || echo "No LiveOS"
+          ls -la "$WORK_DIR/images" 2>/dev/null || echo "No images"
+          
+          # Create BIOS-only ISO with mkisofs
+          mkisofs \
+            -o "${RESULTS_DIR}/TahoeOS-2026.1-x86_64.iso" \
+            -b images/eltorito.img \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            -V TahoeOS \
+            -R -J \
+            -pad \
+            "$WORK_DIR/"
+          
+          echo "=== ISO created ==="
+          ls -la "${RESULTS_DIR}/"*.iso
 
       - name: Copy ISO to workspace
         run: |
           mkdir -p $GITHUB_WORKSPACE/iso-output
           ISO_DIR="${{ env.RESULTS_DIR }}"
           
-          if [ -d "$ISO_DIR" ]; then
-            cp "$ISO_DIR"/*.iso $GITHUB_WORKSPACE/iso-output/ 2>/dev/null || echo "No ISO in $ISO_DIR"
+          if [ -d "$ISO_DIR" ] && [ -f "$ISO_DIR/TahoeOS-2026.1-x86_64.iso" ]; then
+            cp "$ISO_DIR/TahoeOS-2026.1-x86_64.iso" $GITHUB_WORKSPACE/iso-output/
             ls -la $GITHUB_WORKSPACE/iso-output/
           else
-            echo "No ISO directory found"
+            echo "No ISO found in $ISO_DIR"
             find /tmp -name "TahoeOS-*.iso" 2>/dev/null | head -5
           fi
       
