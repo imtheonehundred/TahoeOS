@@ -38,6 +38,10 @@ gnome-extensions-app
 gnome-shell-extension-dash-to-dock
 gnome-shell-extension-appindicator
 
+# Live ISO requirements
+dracut-live
+livesys-scripts
+
 # Boot theming
 plymouth
 plymouth-theme-spinner
