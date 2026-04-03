@@ -69,7 +69,11 @@ jobs:
 
       - name: Build ISO
         run: |
-          mkdir -p /var/tmp/tahoeos /tmp/iso-output
+          mkdir -p /var/tmp/tahoeos
+          
+          # Clean up previous build outputs
+          rm -rf /tmp/iso-output || true
+          mkdir -p /tmp/iso-output
           
           # Ensure EFI packages are installed for lorax template processing
           dnf install -y grub2-efi-x64 shim-x64 || true
