@@ -125,6 +125,35 @@ EOF
 # GRUB Branding
 sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="TahoeOS"/' /mnt/sysroot/etc/default/grub || true
 
+# Create EFI/BOOT directory for hybrid ISO creation
+# Lorax/xorriso needs /EFI/BOOT in root filesystem for hybrid boot
+mkdir -p /mnt/sysroot/EFI/BOOT
+
+# Copy EFI bootloader files from installed packages
+if [ -f /mnt/sysroot/usr/share/efi/x86_64/BOOTX64.EFI ]; then
+    cp /mnt/sysroot/usr/share/efi/x86_64/BOOTX64.EFI /mnt/sysroot/EFI/BOOT/ 2>/dev/null || true
+fi
+if [ -f /mnt/sysroot/usr/share/efi/x86_64/GRUBX64.EFI ]; then
+    cp /mnt/sysroot/usr/share/efi/x86_64/GRUBX64.EFI /mnt/sysroot/EFI/BOOT/ 2>/dev/null || true
+fi
+
+# Alternative locations for EFI files
+for dir in /mnt/sysroot/usr/lib/grub/x86_64-efi /mnt/sysroot/usr/share/grub/efi; do
+    if [ -d "$dir" ]; then
+        find "$dir" -name "*.efi" -exec cp {} /mnt/sysroot/EFI/BOOT/ \; 2>/dev/null || true
+    fi
+done
+
+# If shim is installed, copy shimx64.efi as bootx64.efi
+if [ -f /mnt/sysroot/usr/share/efi/shimx64.efi ]; then
+    cp /mnt/sysroot/usr/share/efi/shimx64.efi /mnt/sysroot/EFI/BOOT/BOOTX64.EFI 2>/dev/null || true
+fi
+if [ -f /mnt/sysroot/usr/share/efi/grubx64.efi ]; then
+    cp /mnt/sysroot/usr/share/efi/grubx64.efi /mnt/sysroot/EFI/BOOT/GRUBX64.EFI 2>/dev/null || true
+fi
+
+ls -la /mnt/sysroot/EFI/BOOT/ 2>/dev/null || echo "EFI/BOOT not populated"
+
 # Copy themes from repo to installed system
 if [ -d "/__w/TahoeOS/TahoeOS/build/themes-bundle" ]; then
     echo "Copying pre-downloaded themes to installed system..."
