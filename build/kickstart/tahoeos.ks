@@ -104,7 +104,7 @@ liberation-fonts
 %end
 
 %post --log=/root/tahoeos-post.log --nochroot
-echo "=== TahoeOS Post-Install ==="
+echo "=== TahoeOS Post-Install (NoChroot) ==="
 echo "Started: $(date)"
 
 # OS Branding
@@ -125,40 +125,58 @@ EOF
 # GRUB Branding
 sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="TahoeOS"/' /mnt/sysroot/etc/default/grub || true
 
-# Create EFI/BOOT directory for hybrid ISO creation
-# Lorax/xorriso needs /EFI/BOOT in root filesystem for hybrid boot
-mkdir -p /mnt/sysroot/EFI/BOOT
-
-# Copy EFI bootloader files from installed packages
-if [ -f /mnt/sysroot/usr/share/efi/x86_64/BOOTX64.EFI ]; then
-    cp /mnt/sysroot/usr/share/efi/x86_64/BOOTX64.EFI /mnt/sysroot/EFI/BOOT/ 2>/dev/null || true
-fi
-if [ -f /mnt/sysroot/usr/share/efi/x86_64/GRUBX64.EFI ]; then
-    cp /mnt/sysroot/usr/share/efi/x86_64/GRUBX64.EFI /mnt/sysroot/EFI/BOOT/ 2>/dev/null || true
+# Create EFI/BOOT directory at the lorax work directory level
+# Lorax x86.tmpl expects EFI/BOOT at /<workdir>/EFI/BOOT, not inside mnt/sysroot
+# Find the work directory (it contains LiveOS folder)
+WORK_DIR=$(find /var/tmp -maxdepth 2 -type d -name "lmc-work-*" 2>/dev/null | head -1)
+if [ -z "$WORK_DIR" ]; then
+    # Fallback: construct from known pattern
+    WORK_DIR="/var/tmp/tahoeos-$(ls -td /var/tmp/tahoeos-* 2>/dev/null | head -1 | xargs basename)/lmc-work-*"
 fi
 
-# Alternative locations for EFI files
-for dir in /mnt/sysroot/usr/lib/grub/x86_64-efi /mnt/sysroot/usr/share/grub/efi; do
-    if [ -d "$dir" ]; then
-        find "$dir" -name "*.efi" -exec cp {} /mnt/sysroot/EFI/BOOT/ \; 2>/dev/null || true
+echo "Work directory: $WORK_DIR"
+
+# Create EFI/BOOT at work directory level (where lorax expects it)
+if [ -d "/mnt/sysroot/boot/efi" ]; then
+    # Standard EFI location from installation
+    EFI_SRC="/mnt/sysroot/boot/efi"
+elif [ -d "/mnt/sysroot/usr/share/efi/x86_64" ]; then
+    EFI_SRC="/mnt/sysroot/usr/share/efi/x86_64"
+elif [ -d "/mnt/sysroot/usr/lib/grub/x86_64-efi" ]; then
+    EFI_SRC="/mnt/sysroot/usr/lib/grub/x86_64-efi"
+else
+    EFI_SRC=""
+fi
+
+# For each potential work directory, create EFI/BOOT
+for WD in $(find /var/tmp -maxdepth 3 -type d -name "lmc-work-*" 2>/dev/null); do
+    echo "Setting up EFI/BOOT in $WD"
+    mkdir -p "$WD/EFI/BOOT"
+    
+    # Copy EFI files from standard locations
+    if [ -n "$EFI_SRC" ] && [ -d "$EFI_SRC" ]; then
+        find "$EFI_SRC" -name "*.efi" -exec cp {} "$WD/EFI/BOOT/" \; 2>/dev/null || true
     fi
+    
+    # Copy from shim if present
+    if [ -f /mnt/sysroot/usr/share/shimx64.efi ]; then
+        cp /mnt/sysroot/usr/share/shimx64.efi "$WD/EFI/BOOT/BOOTX64.EFI" 2>/dev/null || true
+    fi
+    if [ -f /mnt/sysroot/usr/share/grubx64.efi ]; then
+        cp /mnt/sysroot/usr/share/grubx64.efi "$WD/EFI/BOOT/GRUBX64.EFI" 2>/dev/null || true
+    fi
+    
+    # List what we got
+    ls -la "$WD/EFI/BOOT/" 2>/dev/null || echo "EFI/BOOT still empty in $WD"
 done
-
-# If shim is installed, copy shimx64.efi as bootx64.efi
-if [ -f /mnt/sysroot/usr/share/efi/shimx64.efi ]; then
-    cp /mnt/sysroot/usr/share/efi/shimx64.efi /mnt/sysroot/EFI/BOOT/BOOTX64.EFI 2>/dev/null || true
-fi
-if [ -f /mnt/sysroot/usr/share/efi/grubx64.efi ]; then
-    cp /mnt/sysroot/usr/share/efi/grubx64.efi /mnt/sysroot/EFI/BOOT/GRUBX64.EFI 2>/dev/null || true
-fi
-
-ls -la /mnt/sysroot/EFI/BOOT/ 2>/dev/null || echo "EFI/BOOT not populated"
 
 # Copy themes from repo to installed system
 if [ -d "/__w/TahoeOS/TahoeOS/build/themes-bundle" ]; then
     echo "Copying pre-downloaded themes to installed system..."
     cp -r /__w/TahoeOS/TahoeOS/build/themes-bundle /mnt/sysroot/tmp/
 fi
+
+echo "=== NoChroot post-install complete ==="
 
 %end
 
