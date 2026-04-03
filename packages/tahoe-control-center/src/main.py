@@ -210,66 +210,243 @@ class ControlCenterWindow(Adw.ApplicationWindow):
 
     def create_gpu_panel(self):
         page = Adw.PreferencesPage()
-        group = Adw.PreferencesGroup(
-            title="Graphics", description="Manage graphics drivers and settings"
-        )
 
         import subprocess
 
-        # Detect GPU
+        detected_gpus = self.detect_all_gpus()
+
+        info_group = Adw.PreferencesGroup(
+            title="Detected Graphics Cards",
+            description="Current hardware detected on your system",
+        )
+
+        if not detected_gpus:
+            no_gpu_row = Adw.ActionRow(
+                title="No GPU Detected", subtitle="Using software rendering"
+            )
+            info_group.add(no_gpu_row)
+        else:
+            for gpu in detected_gpus:
+                gpu_row = Adw.ActionRow(title=gpu["vendor"], subtitle=gpu["model"])
+                info_group.add(gpu_row)
+
+        page.add(info_group)
+
+        nvidia_group = Adw.PreferencesGroup(
+            title="NVIDIA Drivers",
+            description="Proprietary drivers for NVIDIA graphics cards",
+        )
+
+        nvidia_status = self.check_nvidia_status(detected_gpus)
+        nvidia_row = Adw.ActionRow(
+            title="NVIDIA Proprietary Driver", subtitle=nvidia_status["status"]
+        )
+
+        if nvidia_status["action"] == "install":
+            nvidia_btn = Gtk.Button(label="Install")
+            nvidia_btn.add_css_class("suggested-action")
+            nvidia_btn.set_valign(Gtk.Align.CENTER)
+            nvidia_btn.connect("clicked", self.install_nvidia_drivers)
+            nvidia_row.add_suffix(nvidia_btn)
+        elif nvidia_status["action"] == "update":
+            nvidia_btn = Gtk.Button(label="Update")
+            nvidia_btn.add_css_class("suggested-action")
+            nvidia_btn.set_valign(Gtk.Align.CENTER)
+            nvidia_btn.connect("clicked", self.update_nvidia_drivers)
+            nvidia_row.add_suffix(nvidia_btn)
+
+        nvidia_group.add(nvidia_row)
+        page.add(nvidia_group)
+
+        amd_group = Adw.PreferencesGroup(
+            title="AMD Drivers",
+            description="Open source AMDGPU drivers (pre-installed)",
+        )
+
+        amd_status = self.check_amd_status(detected_gpus)
+        amd_row = Adw.ActionRow(
+            title="AMD Open Source Driver", subtitle=amd_status["status"]
+        )
+
+        if amd_status["action"] == "update":
+            amd_btn = Gtk.Button(label="Update Mesa")
+            amd_btn.add_css_class("suggested-action")
+            amd_btn.set_valign(Gtk.Align.CENTER)
+            amd_btn.connect("clicked", self.update_mesa_drivers)
+            amd_row.add_suffix(amd_btn)
+
+        amd_group.add(amd_row)
+        page.add(amd_group)
+
+        intel_group = Adw.PreferencesGroup(
+            title="Intel Drivers",
+            description="Open source Intel graphics drivers (pre-installed)",
+        )
+
+        intel_status = self.check_intel_status(detected_gpus)
+        intel_row = Adw.ActionRow(
+            title="Intel Open Source Driver", subtitle=intel_status["status"]
+        )
+
+        if intel_status["action"] == "update":
+            intel_btn = Gtk.Button(label="Update Mesa")
+            intel_btn.add_css_class("suggested-action")
+            intel_btn.set_valign(Gtk.Align.CENTER)
+            intel_btn.connect("clicked", self.update_mesa_drivers)
+            intel_row.add_suffix(intel_btn)
+
+        intel_group.add(intel_row)
+        page.add(intel_group)
+
+        return page
+
+    def detect_all_gpus(self):
+        import subprocess
+
+        gpus = []
         try:
             lspci = subprocess.check_output(["lspci", "-nn"], text=True)
-            gpu_info = "Integrated Graphics"
-            gpu_vendor = "unknown"
-
             for line in lspci.split("\n"):
                 if "VGA" in line or "3D" in line or "Display" in line:
                     if "NVIDIA" in line.upper():
-                        gpu_info = line.split(":")[2].strip()[:50]
-                        gpu_vendor = "nvidia"
+                        model = (
+                            line.split(":", 2)[2].strip()
+                            if len(line.split(":", 2)) > 2
+                            else "NVIDIA GPU"
+                        )
+                        gpus.append({"vendor": "NVIDIA", "model": model[:60]})
                     elif "AMD" in line.upper() or "ATI" in line.upper():
-                        gpu_info = line.split(":")[2].strip()[:50]
-                        gpu_vendor = "amd"
+                        model = (
+                            line.split(":", 2)[2].strip()
+                            if len(line.split(":", 2)) > 2
+                            else "AMD GPU"
+                        )
+                        gpus.append({"vendor": "AMD", "model": model[:60]})
                     elif "INTEL" in line.upper():
-                        gpu_info = line.split(":")[2].strip()[:50]
-                        gpu_vendor = "intel"
-                    break
+                        model = (
+                            line.split(":", 2)[2].strip()
+                            if len(line.split(":", 2)) > 2
+                            else "Intel GPU"
+                        )
+                        gpus.append({"vendor": "Intel", "model": model[:60]})
         except:
-            gpu_info = "Unknown GPU"
-            gpu_vendor = "unknown"
+            pass
 
-        # GPU Info Row
-        gpu_row = Adw.ActionRow(title="Graphics Card", subtitle=gpu_info)
-        group.add(gpu_row)
+        return gpus
 
-        # Driver Row
-        driver_status = "Open Source (Mesa)"
-        if gpu_vendor == "nvidia":
-            try:
-                subprocess.run(["nvidia-smi"], capture_output=True, check=True)
-                driver_status = "NVIDIA Proprietary"
-            except:
-                driver_status = (
-                    "Open Source (Nouveau) - Click to install NVIDIA drivers"
-                )
-        elif gpu_vendor == "amd":
-            driver_status = "Open Source (AMDGPU)"
-        elif gpu_vendor == "intel":
-            driver_status = "Open Source (Intel)"
+    def check_nvidia_status(self, detected_gpus):
+        import subprocess
 
-        driver_row = Adw.ActionRow(title="Driver", subtitle=driver_status)
+        has_nvidia = any(gpu["vendor"] == "NVIDIA" for gpu in detected_gpus)
 
-        # Install button for NVIDIA
-        if gpu_vendor == "nvidia" and "Nouveau" in driver_status:
-            install_btn = Gtk.Button(label="Install")
-            install_btn.add_css_class("suggested-action")
-            install_btn.set_valign(Gtk.Align.CENTER)
-            install_btn.connect("clicked", self.install_nvidia_drivers)
-            driver_row.add_suffix(install_btn)
+        if not has_nvidia:
+            return {"status": "No NVIDIA GPU detected", "action": None}
 
-        group.add(driver_row)
-        page.add(group)
-        return page
+        try:
+            result = subprocess.run(
+                ["nvidia-smi"], capture_output=True, check=True, text=True
+            )
+            driver_line = [
+                l for l in result.stdout.split("\n") if "Driver Version:" in l
+            ]
+            if driver_line:
+                version = driver_line[0].split("Driver Version:")[1].split()[0]
+                return {"status": f"Installed (v{version})", "action": "update"}
+            return {"status": "Installed", "action": "update"}
+        except:
+            return {
+                "status": "Not installed (using Nouveau open source driver)",
+                "action": "install",
+            }
+
+    def check_amd_status(self, detected_gpus):
+        import subprocess
+
+        has_amd = any(gpu["vendor"] == "AMD" for gpu in detected_gpus)
+
+        if not has_amd:
+            return {"status": "No AMD GPU detected", "action": None}
+
+        try:
+            result = subprocess.run(["glxinfo"], capture_output=True, text=True)
+            if "AMD" in result.stdout or "Radeon" in result.stdout:
+                return {
+                    "status": "Installed and active (AMDGPU Mesa driver)",
+                    "action": "update",
+                }
+        except:
+            pass
+
+        return {"status": "Installed (AMDGPU Mesa driver)", "action": "update"}
+
+    def check_intel_status(self, detected_gpus):
+        import subprocess
+
+        has_intel = any(gpu["vendor"] == "Intel" for gpu in detected_gpus)
+
+        if not has_intel:
+            return {"status": "No Intel GPU detected", "action": None}
+
+        try:
+            result = subprocess.run(["glxinfo"], capture_output=True, text=True)
+            if "Intel" in result.stdout:
+                return {
+                    "status": "Installed and active (Intel Mesa driver)",
+                    "action": "update",
+                }
+        except:
+            pass
+
+        return {"status": "Installed (Intel Mesa driver)", "action": "update"}
+
+    def update_nvidia_drivers(self, btn):
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading="Update NVIDIA Drivers?",
+            body="This will update NVIDIA proprietary drivers to the latest version.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("update", "Update")
+        dialog.set_response_appearance("update", Adw.ResponseAppearance.SUGGESTED)
+        dialog.connect("response", self.on_nvidia_update_response)
+        dialog.present()
+
+    def on_nvidia_update_response(self, dialog, response):
+        if response == "update":
+            import subprocess
+
+            subprocess.Popen(
+                [
+                    "gnome-terminal",
+                    "--",
+                    "sudo",
+                    "dnf",
+                    "update",
+                    "-y",
+                    "akmod-nvidia",
+                    "xorg-x11-drv-nvidia-cuda",
+                ]
+            )
+
+    def update_mesa_drivers(self, btn):
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading="Update Mesa Drivers?",
+            body="This will update Mesa graphics drivers to the latest version.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("update", "Update")
+        dialog.set_response_appearance("update", Adw.ResponseAppearance.SUGGESTED)
+        dialog.connect("response", self.on_mesa_update_response)
+        dialog.present()
+
+    def on_mesa_update_response(self, dialog, response):
+        if response == "update":
+            import subprocess
+
+            subprocess.Popen(
+                ["gnome-terminal", "--", "sudo", "dnf", "update", "-y", "mesa-*"]
+            )
 
     def install_nvidia_drivers(self, btn):
         import subprocess
