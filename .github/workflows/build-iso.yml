@@ -67,7 +67,7 @@ jobs:
           echo "Themes downloaded to build/themes-bundle/"
           ls -la build/themes-bundle/
 
-      - name: Build disk image
+      - name: Build ISO with lorax
         id: build
         run: |
           # Use unique directories to avoid conflicts
@@ -79,106 +79,34 @@ jobs:
           echo "RESULTS_DIR=${RESULTS_DIR}" >> $GITHUB_ENV
           echo "TMP_DIR=${TMP_DIR}" >> $GITHUB_ENV
           
-          # DO NOT create RESULTS_DIR - livemedia-creator needs to create it
-          # Only create TMP_DIR
           mkdir -p "$TMP_DIR"
           
-          # Build only disk image, not ISO
+          # Build ISO with lorax
           livemedia-creator \
-            --make-disk \
-            --image-only \
+            --make-iso \
+            --nomacboot \
             --ks=build/kickstart/tahoeos.ks \
             --no-virt \
             --resultdir="$RESULTS_DIR" \
             --project=TahoeOS \
             --releasever=42 \
+            --iso-only \
+            --iso-name=TahoeOS-2026.1-x86_64.iso \
             --tmp="$TMP_DIR"
         timeout-minutes: 120
-
-      - name: Create BIOS-only ISO
-        run: |
-          set -e
-          
-          echo "=== Creating BIOS-only ISO ==="
-          
-          # Find the work directory
-          WORK_DIR=$(find /var/tmp/tahoeos-* -maxdepth 2 -type d -name "lmc-work-*" 2>/dev/null | head -1)
-          echo "Work directory: $WORK_DIR"
-          
-          if [ -z "$WORK_DIR" ]; then
-            echo "ERROR: Could not find lmc-work directory"
-            exit 1
-          fi
-          
-          cd "$WORK_DIR"
-          ls -la
-          
-          # Create LiveOS structure if not exists
-          mkdir -p LiveOS
-          
-          # Find the disk image
-          if [ -f *.qcow2 ]; then
-            DISK_IMG=$(ls *.qcow2 | head -1)
-            echo "Converting qcow2 to raw: $DISK_IMG"
-            qemu-img convert -O raw "$DISK_IMG" LiveOS/squashfs.img
-          elif [ -f *.img ]; then
-            cp *.img LiveOS/squashfs.img
-          elif [ -f images/install.img ]; then
-            # This is the squashfs for live boot
-            cp images/install.img LiveOS/squashfs.img
-          fi
-          
-          # Create EFI/BOOT for potential UEFI (not used in BIOS-only ISO)
-          mkdir -p EFI/BOOT
-          
-          # Copy kernel and initrd
-          if [ -f images/pxeboot/initrd.img ]; then
-            cp images/pxeboot/initrd.img boot/initrd.img
-          fi
-          if [ -f images/pxeboot/vmlinuz ]; then
-            cp images/pxeboot/vmlinuz boot/vmlinuz
-          fi
-          
-          ls -la LiveOS/
-          
-          # Create BIOS-only ISO with mkisofs
-          echo "Creating BIOS-only ISO..."
-          
-          # Volume ID must be max 16 chars for Joliet
-          mkisofs \
-            -o TahoeOS-2026.1-x86_64.iso \
-            -b images/eltorito.img \
-            -no-emul-boot \
-            -boot-load-size 4 \
-            -boot-info-table \
-            -V TahoeOS \
-            -R -J \
-            -pad \
-            -z \
-            "$WORK_DIR/"
-          
-          ls -la *.iso
-          
-          # Copy to results
-          cp *.iso "$RESULTS_DIR/" 2>/dev/null || cp *.iso /tmp/iso-output-${BUILD_ID}/
 
       - name: Copy ISO to workspace
         run: |
           mkdir -p $GITHUB_WORKSPACE/iso-output
-          BUILD_ID=$(date +%s)
-          ISO_DIR="/tmp/iso-output-${BUILD_ID}"
+          ISO_DIR="${{ env.RESULTS_DIR }}"
           
-          # Find the most recent ISO
-          ISO_FILE=$(find /tmp -name "TahoeOS-*.iso" -type f 2>/dev/null | head -1)
-          if [ -n "$ISO_FILE" ]; then
-            echo "Found ISO: $ISO_FILE"
-            cp "$ISO_FILE" $GITHUB_WORKSPACE/iso-output/
+          if [ -d "$ISO_DIR" ]; then
+            cp "$ISO_DIR"/*.iso $GITHUB_WORKSPACE/iso-output/ 2>/dev/null || echo "No ISO in $ISO_DIR"
+            ls -la $GITHUB_WORKSPACE/iso-output/
           else
-            echo "No ISO found"
-            find /tmp -name "*.iso" 2>/dev/null | head -5
+            echo "No ISO directory found"
+            find /tmp -name "TahoeOS-*.iso" 2>/dev/null | head -5
           fi
-          
-          ls -la $GITHUB_WORKSPACE/iso-output/
       
       - name: Copy ISO to workspace
         run: |
