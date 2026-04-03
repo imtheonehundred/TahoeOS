@@ -69,10 +69,10 @@ jobs:
 
       - name: Build ISO
         run: |
+          # Clean up any previous build outputs
+          rm -rf /tmp/iso-output
+          rm -rf /var/tmp/tahoeos
           mkdir -p /var/tmp/tahoeos
-          
-          # Clean up previous build outputs
-          rm -rf /tmp/iso-output || true
           mkdir -p /tmp/iso-output
           
           # Ensure EFI packages are installed for lorax template processing
