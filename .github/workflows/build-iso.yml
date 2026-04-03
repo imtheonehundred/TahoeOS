@@ -69,7 +69,11 @@ jobs:
 
       - name: Build ISO
         run: |
-          mkdir -p /var/tmp/tahoeos
+          mkdir -p /var/tmp/tahoeos /tmp/iso-output
+          
+          # Ensure EFI packages are installed for lorax template processing
+          dnf install -y grub2-efi-x64 shim-x64 || true
+          
           livemedia-creator \
             --make-iso \
             --ks=build/kickstart/tahoeos.ks \
@@ -81,11 +85,12 @@ jobs:
             --iso-name=TahoeOS-2026.1-x86_64.iso \
             --tmp=/var/tmp/tahoeos
         timeout-minutes: 120
-
+      
       - name: Copy ISO to workspace
         run: |
           mkdir -p $GITHUB_WORKSPACE/iso-output
-          cp /tmp/iso-output/*.iso $GITHUB_WORKSPACE/iso-output/ || true
+          cp /tmp/iso-output/*.iso $GITHUB_WORKSPACE/iso-output/ 2>/dev/null || echo "Trying to find ISO..."
+          find /tmp/iso-output -name "*.iso" -exec cp {} $GITHUB_WORKSPACE/iso-output/ \; 2>/dev/null || true
           ls -la $GITHUB_WORKSPACE/iso-output/
 
       - name: Upload ISO artifact
