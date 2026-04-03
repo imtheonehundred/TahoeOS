@@ -101,8 +101,6 @@ liberation-fonts
 %end
 
 %post --log=/root/tahoeos-post.log --nochroot
-# Note: Network not available in anaconda %post, themes will be installed on first boot
-
 echo "=== TahoeOS Post-Install ==="
 echo "Started: $(date)"
 
@@ -159,6 +157,116 @@ two-finger-scrolling-enabled=true
 night-light-enabled=true
 night-light-schedule-automatic=true
 EOF
+
+# Create first-boot theme installer service
+cat > /mnt/sysroot/usr/local/bin/tahoeos-first-boot.sh << 'EOFSCRIPT'
+#!/bin/bash
+set -e
+
+LOG="/var/log/tahoeos-first-boot.log"
+exec > >(tee -a "$LOG") 2>&1
+
+echo "=== TahoeOS First Boot Setup ==="
+echo "Started: $(date)"
+
+# Install all themes (requires network)
+cd /tmp
+
+# GTK Theme
+echo "[1/6] Installing GTK theme..."
+git clone --depth=1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git
+cd WhiteSur-gtk-theme
+./install.sh -c Dark -l -N glassy --tweaks macOS
+mkdir -p /usr/share/themes
+cp -r ~/.themes/WhiteSur-Dark /usr/share/themes/TahoeOS || true
+cd /tmp
+rm -rf WhiteSur-gtk-theme
+
+# Icon Theme
+echo "[2/6] Installing icon theme..."
+git clone --depth=1 https://github.com/vinceliuice/WhiteSur-icon-theme.git
+cd WhiteSur-icon-theme
+./install.sh
+cd /tmp
+rm -rf WhiteSur-icon-theme
+
+# Cursor Theme
+echo "[3/6] Installing cursor theme..."
+git clone --depth=1 https://github.com/vinceliuice/WhiteSur-cursors.git
+cd WhiteSur-cursors
+./install.sh
+cd /tmp
+rm -rf WhiteSur-cursors
+
+# GRUB Theme
+echo "[4/6] Installing GRUB theme..."
+git clone --depth=1 https://github.com/vinceliuice/grub2-themes.git
+cd grub2-themes
+./install.sh -t whitesur -s 1080p
+cd /tmp
+rm -rf grub2-themes
+grub2-mkconfig -o /boot/grub2/grub.cfg 2>/dev/null || true
+grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg 2>/dev/null || true
+
+# Plymouth Theme
+echo "[5/6] Installing Plymouth theme..."
+git clone --depth=1 https://github.com/AdisonCavani/plymouth-theme-apple.git
+cd plymouth-theme-apple
+cp -r apple /usr/share/plymouth/themes/
+plymouth-set-default-theme apple
+cd /tmp
+rm -rf plymouth-theme-apple
+dracut -f 2>/dev/null || true
+
+# Apply themes system-wide
+echo "[6/6] Applying themes..."
+mkdir -p /etc/dconf/db/gdm.d
+cat > /etc/dconf/db/gdm.d/01-tahoeos << 'EOF'
+[org/gnome/desktop/interface]
+gtk-theme='WhiteSur-Dark'
+icon-theme='WhiteSur-dark'
+cursor-theme='WhiteSur-cursors'
+EOF
+
+sed -i "s/gtk-theme=.*/gtk-theme='WhiteSur-Dark'/" /etc/dconf/db/local.d/00-tahoeos || true
+sed -i "s/icon-theme=.*/icon-theme='WhiteSur-dark'/" /etc/dconf/db/local.d/00-tahoeos || true
+sed -i "s/cursor-theme=.*/cursor-theme='WhiteSur-cursors'/" /etc/dconf/db/local.d/00-tahoeos || true
+
+dconf update
+
+# Install Flatpak remote
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+# Disable this service after first run
+systemctl disable tahoeos-first-boot.service
+
+echo "=== TahoeOS First Boot Complete ==="
+echo "Finished: $(date)"
+echo "Please reboot to see all changes."
+EOFSCRIPT
+
+chmod +x /mnt/sysroot/usr/local/bin/tahoeos-first-boot.sh
+
+# Create systemd service
+cat > /mnt/sysroot/etc/systemd/system/tahoeos-first-boot.service << 'EOFSVC'
+[Unit]
+Description=TahoeOS First Boot Setup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/tahoeos-first-boot.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOFSVC
+
+# Enable the service
+chroot /mnt/sysroot systemctl enable tahoeos-first-boot.service
 
 echo "=== TahoeOS Post-Install Complete ==="
 echo "Finished: $(date)"
