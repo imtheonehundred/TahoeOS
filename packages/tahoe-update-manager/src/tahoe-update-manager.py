@@ -6,6 +6,8 @@ gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib
 import subprocess
 import threading
+import json
+import urllib.request
 
 
 class UpdateWindow(Adw.ApplicationWindow):
@@ -43,16 +45,56 @@ class UpdateWindow(Adw.ApplicationWindow):
 
     def _check_thread(self):
         try:
+            # Check TahoeOS version from GitHub
+            tahoeos_update = self._check_tahoeos_version()
+
+            # Check Fedora/system updates
             result = subprocess.run(
                 ["dnf", "check-update", "-q"], capture_output=True, text=True
             )
             updates = [l for l in result.stdout.strip().split("\n") if l.strip()]
-            GLib.idle_add(self._show_result, updates)
+
+            GLib.idle_add(self._show_result, updates, tahoeos_update)
         except Exception as e:
             GLib.idle_add(self._show_error, str(e))
 
-    def _show_result(self, updates):
-        if updates:
+    def _check_tahoeos_version(self):
+        """Check GitHub for newer TahoeOS release"""
+        try:
+            with urllib.request.urlopen(
+                "https://api.github.com/repos/imtheonehundred/TahoeOS/releases/latest"
+            ) as response:
+                data = json.loads(response.read().decode())
+                latest_version = data.get("tag_name", "").replace("v", "")
+                current_version = "2026.1"  # Read from /etc/os-release
+
+                if latest_version and latest_version > current_version:
+                    return {
+                        "available": True,
+                        "version": latest_version,
+                        "url": data.get("html_url"),
+                        "iso_url": data.get("assets", [{}])[0].get(
+                            "browser_download_url"
+                        ),
+                    }
+        except:
+            pass
+        return {"available": False}
+
+    def _show_result(self, updates, tahoeos_update):
+        if tahoeos_update.get("available"):
+            self.status.set_title(f"TahoeOS {tahoeos_update['version']} available!")
+            self.status.set_description(
+                f"A new version of TahoeOS is available.\n"
+                f"Download the new ISO to upgrade.\n\n"
+                f"System updates: {len(updates)} packages"
+            )
+            self.button.set_label("View Release")
+            self.button.disconnect_by_func(self.check_updates)
+            self.button.connect(
+                "clicked", lambda b: subprocess.run(["xdg-open", tahoeos_update["url"]])
+            )
+        elif updates:
             self.status.set_title(f"{len(updates)} updates available")
             self.status.set_description("Click Update All to install")
             self.button.set_label("Update All")
