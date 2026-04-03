@@ -260,6 +260,11 @@ two-finger-scrolling-enabled=true
 [org/gnome/settings-daemon/plugins/color]
 night-light-enabled=true
 night-light-schedule-automatic=true
+
+[org/gnome/desktop/sound]
+theme-name='freedesktop'
+event-sounds=true
+input-feedback-sounds=true
 EOF
 
 dconf update
