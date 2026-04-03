@@ -77,8 +77,11 @@ jobs:
           
           echo "BUILD_ID=${BUILD_ID}" >> $GITHUB_ENV
           echo "RESULTS_DIR=${RESULTS_DIR}" >> $GITHUB_ENV
+          echo "TMP_DIR=${TMP_DIR}" >> $GITHUB_ENV
           
-          mkdir -p "$RESULTS_DIR" "$TMP_DIR"
+          # DO NOT mkdir RESULTS_DIR - livemedia-creator creates it
+          # Just ensure TMP_DIR exists
+          mkdir -p "$TMP_DIR"
           
           # Ensure EFI packages are installed for lorax template processing
           dnf install -y grub2-efi-x64 shim-x64 || true
