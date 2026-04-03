@@ -1,0 +1,34 @@
+[Default Applications]
+x-scheme-handler/http=firefox.desktop
+x-scheme-handler/https=firefox.desktop
+x-scheme-handler/mailto=org.gnome.Geary.desktop
+text/html=firefox.desktop
+application/pdf=org.gnome.Evince.desktop
+image/jpeg=org.gnome.eog.desktop
+image/png=org.gnome.eog.desktop
+image/gif=org.gnome.eog.desktop
+image/webp=org.gnome.eog.desktop
+image/svg+xml=org.inkscape.Inkscape.desktop
+video/mp4=vlc.desktop
+video/x-matroska=vlc.desktop
+video/webm=vlc.desktop
+audio/mpeg=vlc.desktop
+audio/ogg=vlc.desktop
+audio/flac=vlc.desktop
+inode/directory=org.gnome.Nautilus.desktop
+application/x-ms-dos-executable=tahoe-wine-handler.desktop
+application/x-msdos-program=tahoe-wine-handler.desktop
+application/x-msi=tahoe-wine-handler.desktop
+application/zip=org.gnome.FileRoller.desktop
+application/x-tar=org.gnome.FileRoller.desktop
+application/x-compressed-tar=org.gnome.FileRoller.desktop
+application/x-7z-compressed=org.gnome.FileRoller.desktop
+application/x-rar=org.gnome.FileRoller.desktop
+text/plain=org.gnome.gedit.desktop
+text/x-python=org.gnome.gedit.desktop
+application/json=org.gnome.gedit.desktop
+application/xml=org.gnome.gedit.desktop
+
+[Added Associations]
+application/x-ms-dos-executable=tahoe-wine-handler.desktop;
+application/x-msdos-program=tahoe-wine-handler.desktop;

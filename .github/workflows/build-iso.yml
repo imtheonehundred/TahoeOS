@@ -1,0 +1,96 @@
+name: Build TahoeOS ISO
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'build/**'
+      - 'packages/**'
+      - '.github/workflows/build-iso.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:42
+      options: --privileged
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            lorax \
+            livecd-tools \
+            pykickstart \
+            anaconda \
+            squashfs-tools \
+            xorriso \
+            grub2-efi-x64 \
+            shim-x64 \
+            dracut-live \
+            git \
+            wget \
+            curl
+
+      - name: Setup loop devices
+        run: |
+          modprobe loop || true
+          for i in $(seq 0 7); do
+            [ -e /dev/loop$i ] || mknod /dev/loop$i b 7 $i
+          done
+
+      - name: Build ISO
+        run: |
+          mkdir -p /var/tmp/tahoeos
+          livemedia-creator \
+            --make-iso \
+            --ks=build/kickstart/tahoeos.ks \
+            --no-virt \
+            --resultdir=/tmp/iso-output \
+            --project=TahoeOS \
+            --releasever=42 \
+            --iso-only \
+            --iso-name=TahoeOS-2026.1-x86_64.iso \
+            --tmp=/var/tmp/tahoeos
+        timeout-minutes: 120
+
+      - name: Copy ISO to workspace
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/iso-output
+          cp /tmp/iso-output/*.iso $GITHUB_WORKSPACE/iso-output/ || true
+          ls -la $GITHUB_WORKSPACE/iso-output/
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TahoeOS-2026.1-x86_64
+          path: iso-output/*.iso
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: TahoeOS-2026.1-x86_64
+          path: ./iso
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v2026.1-${{ github.run_number }}
+          name: TahoeOS 2026.1 Build ${{ github.run_number }}
+          files: ./iso/*.iso
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
