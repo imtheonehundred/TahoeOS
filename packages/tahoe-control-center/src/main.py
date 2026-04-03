@@ -35,6 +35,9 @@ class ControlCenterWindow(Adw.ApplicationWindow):
             "display", "Displays", "video-display-symbolic", self.create_display_panel()
         )
         self.add_panel(
+            "gpu", "Graphics & Drivers", "video-card-symbolic", self.create_gpu_panel()
+        )
+        self.add_panel(
             "sound", "Sound", "audio-volume-high-symbolic", self.create_sound_panel()
         )
         self.add_panel(
@@ -204,6 +207,100 @@ class ControlCenterWindow(Adw.ApplicationWindow):
         group.add(user)
         page.add(group)
         return page
+
+    def create_gpu_panel(self):
+        page = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(
+            title="Graphics", description="Manage graphics drivers and settings"
+        )
+
+        import subprocess
+
+        # Detect GPU
+        try:
+            lspci = subprocess.check_output(["lspci", "-nn"], text=True)
+            gpu_info = "Integrated Graphics"
+            gpu_vendor = "unknown"
+
+            for line in lspci.split("\n"):
+                if "VGA" in line or "3D" in line or "Display" in line:
+                    if "NVIDIA" in line.upper():
+                        gpu_info = line.split(":")[2].strip()[:50]
+                        gpu_vendor = "nvidia"
+                    elif "AMD" in line.upper() or "ATI" in line.upper():
+                        gpu_info = line.split(":")[2].strip()[:50]
+                        gpu_vendor = "amd"
+                    elif "INTEL" in line.upper():
+                        gpu_info = line.split(":")[2].strip()[:50]
+                        gpu_vendor = "intel"
+                    break
+        except:
+            gpu_info = "Unknown GPU"
+            gpu_vendor = "unknown"
+
+        # GPU Info Row
+        gpu_row = Adw.ActionRow(title="Graphics Card", subtitle=gpu_info)
+        group.add(gpu_row)
+
+        # Driver Row
+        driver_status = "Open Source (Mesa)"
+        if gpu_vendor == "nvidia":
+            try:
+                subprocess.run(["nvidia-smi"], capture_output=True, check=True)
+                driver_status = "NVIDIA Proprietary"
+            except:
+                driver_status = (
+                    "Open Source (Nouveau) - Click to install NVIDIA drivers"
+                )
+        elif gpu_vendor == "amd":
+            driver_status = "Open Source (AMDGPU)"
+        elif gpu_vendor == "intel":
+            driver_status = "Open Source (Intel)"
+
+        driver_row = Adw.ActionRow(title="Driver", subtitle=driver_status)
+
+        # Install button for NVIDIA
+        if gpu_vendor == "nvidia" and "Nouveau" in driver_status:
+            install_btn = Gtk.Button(label="Install")
+            install_btn.add_css_class("suggested-action")
+            install_btn.set_valign(Gtk.Align.CENTER)
+            install_btn.connect("clicked", self.install_nvidia_drivers)
+            driver_row.add_suffix(install_btn)
+
+        group.add(driver_row)
+        page.add(group)
+        return page
+
+    def install_nvidia_drivers(self, btn):
+        import subprocess
+
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading="Install NVIDIA Drivers?",
+            body="This will install proprietary NVIDIA drivers. A reboot will be required.",
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("install", "Install")
+        dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
+        dialog.connect("response", self.on_nvidia_install_response)
+        dialog.present()
+
+    def on_nvidia_install_response(self, dialog, response):
+        if response == "install":
+            import subprocess
+
+            subprocess.Popen(
+                [
+                    "gnome-terminal",
+                    "--",
+                    "sudo",
+                    "dnf",
+                    "install",
+                    "-y",
+                    "akmod-nvidia",
+                    "xorg-x11-drv-nvidia-cuda",
+                ]
+            )
 
     def create_about_panel(self):
         page = Adw.PreferencesPage()
