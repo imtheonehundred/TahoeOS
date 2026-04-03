@@ -20,7 +20,7 @@ bootloader --location=mbr --timeout=5 --append="quiet splash plymouth.enable=1"
 
 zerombr
 clearpart --all --initlabel
-part / --fstype=ext4 --size=8000
+part / --fstype=ext4 --size=12000
 
 reboot
 
@@ -48,7 +48,6 @@ plymouth-theme-spinner
 grub2-tools
 
 # Multimedia
-vlc
 ffmpeg
 gstreamer1-plugins-good
 gstreamer1-plugins-bad-free
