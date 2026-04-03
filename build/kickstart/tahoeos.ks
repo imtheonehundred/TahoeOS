@@ -2,7 +2,7 @@
 # TahoeOS Kickstart - Full Branded ISO
 # Fedora 42 + macOS Tahoe Theme + Gaming + Boot Branding
 
-text
+# Note: Do not set display mode (text/graphical) - livemedia-creator handles this
 lang en_US.UTF-8
 keyboard us
 timezone UTC --utc
